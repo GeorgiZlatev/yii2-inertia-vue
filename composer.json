@@ -1,0 +1,93 @@
+{
+    "name": "yii2-extensions/app-inertia-vue",
+    "type": "project",
+    "description": "Yii2 application template with Inertia.js and Vue 3",
+    "keywords": [
+        "yii2",
+        "inertia",
+        "vue",
+        "tailwindcss",
+        "flowbite"
+    ],
+    "license": "BSD-3-Clause",
+    "require": {
+        "php": ">=8.3",
+        "php-forge/foxy": "^0.2",
+        "yii2-extensions/inertia": "^0.1",
+        "yii2-extensions/inertia-vue": "^0.1",
+        "yiisoft/yii2": "^22.0@dev",
+        "yiisoft/yii2-symfonymailer": "^4.0"
+    },
+    "require-dev": {
+        "codeception/c3": "^2.9",
+        "codeception/codeception": "^5.3",
+        "codeception/lib-innerbrowser": "^4.1",
+        "codeception/module-asserts": "^3.3",
+        "codeception/module-filesystem": "^3.0",
+        "codeception/module-phpbrowser": "^4.0",
+        "codeception/module-yii2": "^2.0",
+        "codeception/verify": "^3.4",
+        "maglnet/composer-require-checker": "^4.17",
+        "php-forge/coding-standard": "^0.1",
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan-strict-rules": "^2.0.3",
+        "yii2-extensions/phpstan": "^0.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "app\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "app\\tests\\": "tests"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "0.1.x-dev"
+        },
+        "yii\\composer\\Installer::postCreateProject": {
+            "setPermission": [
+                {
+                    "public/assets": "0775",
+                    "runtime": "0775",
+                    "yii": "0755"
+                }
+            ]
+        },
+        "yii\\composer\\Installer::postInstall": {
+            "generateCookieValidationKey": [
+                "config/web.php"
+            ]
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "codeception/c3": true,
+            "php-forge/foxy": true,
+            "phpstan/extension-installer": true,
+            "yiisoft/yii2-composer": true
+        },
+        "foxy": {
+            "enable-packages": {
+                "yiisoft/yii2": false
+            }
+        },
+        "sort-packages": true
+    },
+    "scripts": {
+        "post-create-project-cmd": [
+            "yii\\composer\\Installer::postCreateProject",
+            "yii\\composer\\Installer::postInstall"
+        ],
+        "post-install-cmd": [
+            "yii\\composer\\Installer::postInstall"
+        ],
+        "check-dependencies": "./vendor/bin/composer-require-checker check",
+        "ecs": "./vendor/bin/ecs --fix",
+        "rector": "./vendor/bin/rector process",
+        "static": "./vendor/bin/phpstan --memory-limit=-1",
+        "tests": "vendor/bin/codecept run --env php-builtin --coverage-xml"
+    }
+}

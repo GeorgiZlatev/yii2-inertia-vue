@@ -1,0 +1,15 @@
+#!/usr/bin/env php
+<?php
+
+require __DIR__ . '/config/bootstrap.php';
+
+defined('YII_ENV') || define('YII_ENV', getenv('YII_ENV') ?: 'dev');
+defined('YII_DEBUG') || define('YII_DEBUG', YII_ENV !== 'prod');
+
+require __DIR__ . '/vendor/autoload.php';
+
+$config = require __DIR__ . '/config/console.php';
+
+$application = new yii\console\Application($config);
+$exitCode = $application->run();
+exit($exitCode);
