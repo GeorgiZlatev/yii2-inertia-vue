@@ -70,6 +70,18 @@ const isActive = (href) => {
               Contact
             </Link>
             <Link
+              href="/site/cv"
+              prefetch
+              :class="[
+                'px-3 py-2 text-sm rounded-md transition-colors',
+                isActive('/site/cv')
+                  ? 'text-primary-400 font-medium'
+                  : 'text-gray-400 hover:text-white',
+              ]"
+            >
+              CV
+            </Link>
+            <Link
               v-if="page.props.auth.canViewUsers"
               href="/user/index"
               prefetch
@@ -194,6 +206,17 @@ const isActive = (href) => {
             ]"
           >
             Contact
+          </Link>
+          <Link
+            href="/site/cv"
+            :class="[
+              'block px-3 py-2 text-sm rounded-md',
+              isActive('/site/cv')
+                ? 'text-primary-400 font-medium'
+                : 'text-gray-400 hover:text-white',
+            ]"
+          >
+            CV
           </Link>
           <Link
             v-if="page.props.auth.canViewUsers"
