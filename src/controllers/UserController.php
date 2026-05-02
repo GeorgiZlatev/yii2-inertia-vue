@@ -36,6 +36,22 @@ final class UserController extends Controller
     }
 
     /**
+     * Activates an existing user account.
+     */
+    public function actionActivate(int $id): Response
+    {
+        return $this->updateUserStatus($id, User::STATUS_ACTIVE);
+    }
+
+    /**
+     * Deactivates an existing user account.
+     */
+    public function actionDeactivate(int $id): Response
+    {
+        return $this->updateUserStatus($id, User::STATUS_INACTIVE);
+    }
+
+    /**
      * Displays user list.
      *
      * @return Response Response object containing the rendered result of the action.
@@ -86,22 +102,6 @@ final class UserController extends Controller
                 'users' => $users,
             ],
         );
-    }
-
-    /**
-     * Activates an existing user account.
-     */
-    public function actionActivate(int $id): Response
-    {
-        return $this->updateUserStatus($id, User::STATUS_ACTIVE);
-    }
-
-    /**
-     * Deactivates an existing user account.
-     */
-    public function actionDeactivate(int $id): Response
-    {
-        return $this->updateUserStatus($id, User::STATUS_INACTIVE);
     }
 
     /**

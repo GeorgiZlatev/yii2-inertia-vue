@@ -13,7 +13,10 @@ final class M260502000000CreateTodoTable extends Migration
 {
     public function safeDown(): void
     {
-        $this->dropForeignKey('fk_todo_created_by_user_id', '{{%todo}}');
+        if ($this->db->driverName !== 'sqlite') {
+            $this->dropForeignKey('fk_todo_created_by_user_id', '{{%todo}}');
+        }
+
         $this->dropIndex('idx_todo_created_by', '{{%todo}}');
         $this->dropTable('{{%todo}}');
     }
@@ -36,14 +39,16 @@ final class M260502000000CreateTodoTable extends Migration
 
         $this->createIndex('idx_todo_created_by', '{{%todo}}', 'created_by');
 
-        $this->addForeignKey(
-            'fk_todo_created_by_user_id',
-            '{{%todo}}',
-            'created_by',
-            '{{%user}}',
-            'id',
-            'CASCADE',
-            'RESTRICT',
-        );
+        if ($this->db->driverName !== 'sqlite') {
+            $this->addForeignKey(
+                'fk_todo_created_by_user_id',
+                '{{%todo}}',
+                'created_by',
+                '{{%user}}',
+                'id',
+                'CASCADE',
+                'RESTRICT',
+            );
+        }
     }
 }

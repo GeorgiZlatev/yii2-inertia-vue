@@ -27,9 +27,9 @@ final class Todo extends ActiveRecord
         ];
     }
 
-    public static function tableName(): string
+    public function getCreator(): ActiveQuery
     {
-        return '{{%todo}}';
+        return $this->hasOne(User::class, ['id' => 'created_by']);
     }
 
     public function rules(): array
@@ -51,8 +51,8 @@ final class Todo extends ActiveRecord
         ];
     }
 
-    public function getCreator(): ActiveQuery
+    public static function tableName(): string
     {
-        return $this->hasOne(User::class, ['id' => 'created_by']);
+        return '{{%todo}}';
     }
 }

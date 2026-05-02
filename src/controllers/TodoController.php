@@ -16,33 +16,31 @@ use yii\web\{ForbiddenHttpException, NotFoundHttpException, Response};
  */
 final class TodoController extends Controller
 {
-    public function actionCreate(): Response
+    public function actionComplete(int $id): Response
     {
-        $todo = new Todo();
+        $todo = $this->findTodo($id);
 
-        /** @var array<string, mixed> $post */
-        $post = $this->request->post();
-
-        if ($todo->load($post)) {
-            $todo->created_by = (int) Yii::$app->user->id;
-            $todo->is_completed = (int) $todo->is_completed;
-            $todo->completed_at = $todo->is_completed ? time() : null;
-
-            try {
-                $saved = $todo->save();
-            } catch (Throwable $e) {
-                Yii::error($e->getMessage(), __METHOD__);
-                $saved = false;
-            }
-
-            if ($saved) {
-                Yii::$app->session->setFlash('success', 'Задачата беше създадена успешно.');
-            } elseif ($todo->hasErrors()) {
-                Yii::$app->session->setFlash('errors', $todo->getErrors());
-            } else {
-                Yii::$app->session->setFlash('error', 'Неуспешно създаване на задача.');
-            }
+        if (!$this->canManage($todo)) {
+            throw new ForbiddenHttpException('Нямате достъп до тази задача.');
         }
+
+        if ((bool) $todo->is_completed) {
+            Yii::$app->session->setFlash('info', 'Задачата вече е приключена.');
+
+            return $this->redirect(['todo/index']);
+        }
+
+        $now = time();
+        $todo->is_completed = 1;
+        $todo->completed_at = $now;
+        $todo->updated_at = $now;
+
+        $saved = $todo->save(false, ['is_completed', 'completed_at', 'updated_at']);
+
+        Yii::$app->session->setFlash(
+            $saved ? 'success' : 'error',
+            $saved ? 'Задачата е маркирана като приключена.' : 'Неуспешно приключване на задача.',
+        );
 
         return $this->redirect(['todo/index']);
     }
@@ -85,32 +83,33 @@ final class TodoController extends Controller
 
         return $this->redirect(['todo/index']);
     }
-
-    public function actionComplete(int $id): Response
+    public function actionCreate(): Response
     {
-        $todo = $this->findTodo($id);
+        $todo = new Todo();
 
-        if (!$this->canManage($todo)) {
-            throw new ForbiddenHttpException('Нямате достъп до тази задача.');
+        /** @var array<string, mixed> $post */
+        $post = $this->request->post();
+
+        if ($todo->load($post)) {
+            $todo->created_by = (int) Yii::$app->user->id;
+            $todo->is_completed = (int) $todo->is_completed;
+            $todo->completed_at = $todo->is_completed ? time() : null;
+
+            try {
+                $saved = $todo->save();
+            } catch (Throwable $e) {
+                Yii::error($e->getMessage(), __METHOD__);
+                $saved = false;
+            }
+
+            if ($saved) {
+                Yii::$app->session->setFlash('success', 'Задачата беше създадена успешно.');
+            } elseif ($todo->hasErrors()) {
+                Yii::$app->session->setFlash('errors', $todo->getErrors());
+            } else {
+                Yii::$app->session->setFlash('error', 'Неуспешно създаване на задача.');
+            }
         }
-
-        if ((bool) $todo->is_completed) {
-            Yii::$app->session->setFlash('info', 'Задачата вече е приключена.');
-
-            return $this->redirect(['todo/index']);
-        }
-
-        $now = time();
-        $todo->is_completed = 1;
-        $todo->completed_at = $now;
-        $todo->updated_at = $now;
-
-        $saved = $todo->save(false, ['is_completed', 'completed_at', 'updated_at']);
-
-        Yii::$app->session->setFlash(
-            $saved ? 'success' : 'error',
-            $saved ? 'Задачата е маркирана като приключена.' : 'Неуспешно приключване на задача.',
-        );
 
         return $this->redirect(['todo/index']);
     }
