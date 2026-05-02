@@ -29,6 +29,14 @@ jobs:
       - name: Build and start containers.
         run: docker compose up -d --build
 
+      - name: Wait for MySQL.
+        run: |
+          for i in {1..20}; do
+            docker compose exec -T mysql mysqladmin ping -h 127.0.0.1 -uroot -proot --silent && exit 0
+            sleep 2
+          done
+          exit 1
+
       - name: Fix permissions.
         run: docker compose exec -T php bash -c "chown -R www-data:www-data /app/runtime /app/public/assets && chmod -R ug+rwX /app/runtime /app/public/assets"
 

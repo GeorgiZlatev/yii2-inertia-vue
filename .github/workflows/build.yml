@@ -27,11 +27,66 @@ on:
 
 jobs:
   codeception:
-    uses: yii2-framework/actions/.github/workflows/codeception.yml@v1
-    secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    with:
-      codeception-command: vendor/bin/codecept run --env php-builtin --coverage-xml
-      coverage-file: tests/support/output/coverage.xml
-      extensions: dom, json, gd, imagick, pdo_sqlite
-      php-version: '["8.3","8.4","8.5"]'
+    name: codeception / PHP ${{ matrix.php }}-ubuntu-latest
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.3", "8.4", "8.5"]
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: app_test
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      TEST_DB_CONNECTION: mysql
+      TEST_DB_HOST: 127.0.0.1
+      TEST_DB_PORT: 3306
+      TEST_DB_DATABASE: app_test
+      TEST_DB_USERNAME: root
+      TEST_DB_PASSWORD: root
+
+    steps:
+      - name: Checkout.
+        uses: actions/checkout@v6
+
+      - name: Setup PHP.
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: xdebug
+          extensions: dom, json, gd, imagick, pdo_mysql
+
+      - name: Validate MySQL connection.
+        run: |
+          for i in {1..20}; do
+            mysqladmin ping -h 127.0.0.1 -uroot -proot --silent && break
+            sleep 2
+          done
+
+      - name: Composer install.
+        run: composer install --prefer-dist --no-progress --optimize-autoloader
+
+      - name: Codeception build.
+        run: vendor/bin/codecept build
+
+      - name: Codeception tests.
+        run: vendor/bin/codecept run --env php-builtin --coverage-xml
+
+      - name: Upload coverage to Codecov.
+        if: matrix.php == '8.3'
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: tests/support/output/coverage.xml
