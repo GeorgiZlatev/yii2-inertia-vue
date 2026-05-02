@@ -159,20 +159,20 @@ final class TodoController extends Controller
                 $canEditOrDelete = $isAdmin || ($isOwner && !(bool) $todo->is_completed);
 
                 return [
-                'id' => $todo->id,
-                'title' => $todo->title,
-                'description' => $todo->description,
-                'isCompleted' => (bool) $todo->is_completed,
-                'createdAt' => $todo->created_at,
-                'completedAt' => $todo->completed_at,
-                'canComplete' => $canComplete,
-                'canEdit' => $canEditOrDelete,
-                'canDelete' => $canEditOrDelete,
-                'createdBy' => [
-                    'id' => $todo->creator?->id,
-                    'username' => $todo->creator?->username,
-                    'email' => $todo->creator?->email,
-                ],
+                    'id' => $todo->id,
+                    'title' => $todo->title,
+                    'description' => $todo->description,
+                    'isCompleted' => (bool) $todo->is_completed,
+                    'createdAt' => $todo->created_at,
+                    'completedAt' => $todo->completed_at,
+                    'canComplete' => $canComplete,
+                    'canEdit' => $canEditOrDelete,
+                    'canDelete' => $canEditOrDelete,
+                    'createdBy' => [
+                        'id' => $todo->creator?->id,
+                        'username' => $todo->creator?->username,
+                        'email' => $todo->creator?->email,
+                    ],
                 ];
             },
             $models,
