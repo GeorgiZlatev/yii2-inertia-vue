@@ -155,21 +155,38 @@ final class ResendVerificationEmailFormTest extends \Codeception\Test\Unit
     public function testRateLimitDoesNotBlockLegitimateCaseAfterMismatchedCase(): void
     {
         $supportEmail = Yii::$app->params['supportEmail'];
+        $driver = Yii::$app->db->driverName;
 
         $mismatched = new ResendVerificationEmailForm();
 
         $mismatched->attributes = ['email' => 'TEST.TEST@EXAMPLE.COM'];
 
-        verify($mismatched->sendEmail(Yii::$app->mailer, $supportEmail, Yii::$app->name))
-            ->false(
-                "Failed asserting that 'sendEmail' returns 'false' for a case-mismatched address (lookup misses).",
-            );
+        $mismatchedResult = $mismatched->sendEmail(Yii::$app->mailer, $supportEmail, Yii::$app->name);
 
         $legit = new ResendVerificationEmailForm();
 
         $legit->attributes = ['email' => 'test.test@example.com'];
 
-        verify($legit->sendEmail(Yii::$app->mailer, $supportEmail, Yii::$app->name))
+        $legitResult = $legit->sendEmail(Yii::$app->mailer, $supportEmail, Yii::$app->name);
+
+        if ($driver === 'mysql') {
+            verify($mismatchedResult)
+                ->true(
+                    "Failed asserting that MySQL's case-insensitive collation allows case-mismatched email lookup.",
+                );
+            verify($legitResult)
+                ->false(
+                    'Failed asserting that the cooldown blocks immediate second send after a successful mismatched-case request.',
+                );
+
+            return;
+        }
+
+        verify($mismatchedResult)
+            ->false(
+                "Failed asserting that 'sendEmail' returns 'false' for a case-mismatched address (lookup misses).",
+            );
+        verify($legitResult)
             ->true(
                 'Failed asserting that a legitimate case-correct resend is not blocked by a prior case-mismatched request.',
             );

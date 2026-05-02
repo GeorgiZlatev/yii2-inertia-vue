@@ -18,6 +18,13 @@ final class CreateUserTableTest extends \Codeception\Test\Unit
     public function testSafeDownDropsUserTable(): void
     {
         $db = Yii::$app->db;
+        $driver = $db->driverName;
+
+        if ($driver === 'mysql') {
+            self::markTestSkipped(
+                "MySQL performs implicit commits on DDL statements, which breaks Codeception's per-test savepoint.",
+            );
+        }
 
         $schema = $db->schema;
 
