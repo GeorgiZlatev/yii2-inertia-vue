@@ -40,6 +40,8 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_DATABASE: app_test
+          MYSQL_USER: app
+          MYSQL_PASSWORD: app
           MYSQL_ROOT_PASSWORD: root
         ports:
           - 3306:3306
@@ -54,8 +56,8 @@ jobs:
       TEST_DB_HOST: 127.0.0.1
       TEST_DB_PORT: 3306
       TEST_DB_DATABASE: app_test
-      TEST_DB_USERNAME: root
-      TEST_DB_PASSWORD: root
+      TEST_DB_USERNAME: app
+      TEST_DB_PASSWORD: app
 
     steps:
       - name: Checkout.
@@ -71,9 +73,11 @@ jobs:
       - name: Validate MySQL connection.
         run: |
           for i in {1..20}; do
-            mysqladmin ping -h 127.0.0.1 -uroot -proot --silent && break
+            mysqladmin ping -h 127.0.0.1 -uroot -proot --silent && exit 0
             sleep 2
           done
+          echo "MySQL is not reachable."
+          exit 1
 
       - name: Composer install.
         run: composer install --prefer-dist --no-progress --optimize-autoloader
