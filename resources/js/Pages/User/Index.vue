@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch, onUnmounted } from "vue";
-import { Head, router } from "@inertiajs/vue3";
+import { Head, router, usePage } from "@inertiajs/vue3";
 import {
   FwbTable,
   FwbTableHead,
@@ -35,6 +35,7 @@ const props = defineProps({
     default: () => ({ username: "", email: "", status: "" }),
   },
 });
+const page = usePage();
 
 const STATUS_ACTIVE = 10;
 const STATUS_INACTIVE = 9;
@@ -148,6 +149,43 @@ const formatDate = (timestamp) => {
 
 const getStatus = (status) =>
   statusMap[status] || { label: "Unknown", type: "dark" };
+
+const isCurrentUser = (userId) => Number(page.props.auth.user?.id) === Number(userId);
+const canActivate = (user) => user.status !== STATUS_ACTIVE;
+const canDeactivate = (user) =>
+  user.status === STATUS_ACTIVE && !isCurrentUser(user.id);
+
+const activateUser = (user) => {
+  if (!canActivate(user)) {
+    return;
+  }
+
+  router.post(
+    `/user/activate?id=${user.id}`,
+    {},
+    { preserveScroll: true, preserveState: true },
+  );
+};
+
+const deactivateUser = (user) => {
+  if (!canDeactivate(user)) {
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Deactivate user "${user.username}"?`,
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  router.post(
+    `/user/deactivate?id=${user.id}`,
+    {},
+    { preserveScroll: true, preserveState: true },
+  );
+};
 </script>
 
 <template>
@@ -243,6 +281,7 @@ const getStatus = (status) =>
                       Joined{{ sortIcon("created_at") }}
                     </button>
                   </FwbTableHeadCell>
+                  <FwbTableHeadCell>Actions</FwbTableHeadCell>
                 </FwbTableHead>
 
                 <!-- Filter row -->
@@ -281,6 +320,9 @@ const getStatus = (status) =>
                     <FwbTableCell
                       class="!py-2 bg-gray-100 dark:bg-gray-900/50"
                     />
+                    <FwbTableCell
+                      class="!py-2 bg-gray-100 dark:bg-gray-900/50"
+                    />
                   </FwbTableRow>
                 </FwbTableBody>
 
@@ -288,7 +330,7 @@ const getStatus = (status) =>
                 <FwbTableBody>
                   <FwbTableRow v-if="users.length === 0">
                     <FwbTableCell
-                      colspan="4"
+                      colspan="5"
                       class="text-center !py-10 text-gray-500 dark:text-gray-400"
                     >
                       No results found.
@@ -315,6 +357,36 @@ const getStatus = (status) =>
                     </FwbTableCell>
                     <FwbTableCell class="whitespace-nowrap">
                       {{ formatDate(user.created_at) }}
+                    </FwbTableCell>
+                    <FwbTableCell class="whitespace-nowrap">
+                      <div class="flex gap-2">
+                        <button
+                          type="button"
+                          class="rounded-md px-2.5 py-1 text-xs font-medium border transition-colors"
+                          :class="
+                            canActivate(user)
+                              ? 'border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                              : 'border-gray-300 text-gray-400 cursor-not-allowed dark:border-gray-700 dark:text-gray-500'
+                          "
+                          :disabled="!canActivate(user)"
+                          @click="activateUser(user)"
+                        >
+                          Activate
+                        </button>
+                        <button
+                          type="button"
+                          class="rounded-md px-2.5 py-1 text-xs font-medium border transition-colors"
+                          :class="
+                            canDeactivate(user)
+                              ? 'border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                              : 'border-gray-300 text-gray-400 cursor-not-allowed dark:border-gray-700 dark:text-gray-500'
+                          "
+                          :disabled="!canDeactivate(user)"
+                          @click="deactivateUser(user)"
+                        >
+                          Deactivate
+                        </button>
+                      </div>
                     </FwbTableCell>
                   </FwbTableRow>
                 </FwbTableBody>

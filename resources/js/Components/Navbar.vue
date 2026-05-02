@@ -70,16 +70,17 @@ const isActive = (href) => {
               Contact
             </Link>
             <Link
-              href="/site/cv"
+              v-if="!page.props.auth.isGuest"
+              href="/todo/index"
               prefetch
               :class="[
                 'px-3 py-2 text-sm rounded-md transition-colors',
-                isActive('/site/cv')
+                isActive('/todo/index')
                   ? 'text-primary-400 font-medium'
                   : 'text-gray-400 hover:text-white',
               ]"
             >
-              CV
+              To-Do
             </Link>
             <Link
               v-if="page.props.auth.canViewUsers"
@@ -208,15 +209,16 @@ const isActive = (href) => {
             Contact
           </Link>
           <Link
-            href="/site/cv"
+            v-if="!page.props.auth.isGuest"
+            href="/todo/index"
             :class="[
               'block px-3 py-2 text-sm rounded-md',
-              isActive('/site/cv')
+              isActive('/todo/index')
                 ? 'text-primary-400 font-medium'
                 : 'text-gray-400 hover:text-white',
             ]"
           >
-            CV
+            To-Do
           </Link>
           <Link
             v-if="page.props.auth.canViewUsers"

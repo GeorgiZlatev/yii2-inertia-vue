@@ -90,18 +90,6 @@ final class SiteController extends Controller
     }
 
     /**
-     * Displays CV page.
-     *
-     * @return Response Response object containing the rendered CV page.
-     */
-    public function actionCv(): Response
-    {
-        return $this->inertia(
-            'Site/Cv',
-        );
-    }
-
-    /**
      * Displays error page.
      *
      * @return Response Response object containing the rendered error page.

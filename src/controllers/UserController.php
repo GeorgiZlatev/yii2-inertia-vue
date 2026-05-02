@@ -20,7 +20,7 @@ use yii\base\InvalidArgumentException;
 use yii\filters\{AccessControl, VerbFilter};
 use yii\inertia\web\Controller;
 use yii\mail\MailerInterface;
-use yii\web\{BadRequestHttpException, Response};
+use yii\web\{BadRequestHttpException, NotFoundHttpException, Response};
 
 /**
  * Handles user-related actions: login, logout, signup, password recovery, email verification, and user listing.
@@ -86,6 +86,22 @@ final class UserController extends Controller
                 'users' => $users,
             ],
         );
+    }
+
+    /**
+     * Activates an existing user account.
+     */
+    public function actionActivate(int $id): Response
+    {
+        return $this->updateUserStatus($id, User::STATUS_ACTIVE);
+    }
+
+    /**
+     * Deactivates an existing user account.
+     */
+    public function actionDeactivate(int $id): Response
+    {
+        return $this->updateUserStatus($id, User::STATUS_INACTIVE);
     }
 
     /**
@@ -334,6 +350,8 @@ final class UserController extends Controller
             'access' => [
                 'class' => AccessControl::class,
                 'only' => [
+                    'activate',
+                    'deactivate',
                     'index',
                     'login',
                     'logout',
@@ -360,6 +378,8 @@ final class UserController extends Controller
                     ],
                     [
                         'actions' => [
+                            'activate',
+                            'deactivate',
                             'index',
                         ],
                         'allow' => true,
@@ -381,6 +401,12 @@ final class UserController extends Controller
             'verbs' => [
                 'class' => VerbFilter::class,
                 'actions' => [
+                    'activate' => [
+                        'post',
+                    ],
+                    'deactivate' => [
+                        'post',
+                    ],
                     'index' => [
                         'get',
                     ],
@@ -390,5 +416,38 @@ final class UserController extends Controller
                 ],
             ],
         ];
+    }
+
+    private function updateUserStatus(int $id, int $status): Response
+    {
+        $user = User::findOne($id);
+
+        if (!$user instanceof User) {
+            throw new NotFoundHttpException('User not found.');
+        }
+
+        if ((int) Yii::$app->user->id === $user->id && $status !== User::STATUS_ACTIVE) {
+            Yii::$app->session->setFlash('error', 'You cannot deactivate your own account.');
+
+            return $this->redirect(['user/index']);
+        }
+
+        if ($user->status === $status) {
+            Yii::$app->session->setFlash('info', 'User status is already up to date.');
+
+            return $this->redirect(['user/index']);
+        }
+
+        $user->status = $status;
+        $user->updated_at = time();
+
+        $saved = $user->save(false, ['status', 'updated_at']);
+
+        Yii::$app->session->setFlash(
+            $saved ? 'success' : 'error',
+            $saved ? 'User status updated successfully.' : 'Unable to update user status.',
+        );
+
+        return $this->redirect(['user/index']);
     }
 }
