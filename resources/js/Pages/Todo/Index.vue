@@ -28,6 +28,10 @@ const editForm = useForm({
   "Todo[is_completed]": false,
 });
 const deleteForm = useForm({});
+const deleteModal = ref({
+  open: false,
+  todo: null,
+});
 
 const sortedTodos = computed(() =>
   [...props.todos].sort((a, b) => Number(b.createdAt) - Number(a.createdAt)),
@@ -57,6 +61,10 @@ const createTask = () => {
 };
 
 const startEdit = (todo) => {
+  if (!todo?.canEdit) {
+    return;
+  }
+
   editingId.value = todo.id;
   editForm["Todo[title]"] = todo.title;
   editForm["Todo[description]"] = todo.description;
@@ -78,20 +86,42 @@ const updateTask = (id) => {
   });
 };
 
-const deleteTask = (todo) => {
-  const title = todo?.title ? ` "${todo.title}"` : "";
+const openDeleteModal = (todo) => {
+  if (!todo?.canDelete) {
+    return;
+  }
 
-  if (!window.confirm(`Сигурни ли сте, че искате да изтриете задачата${title}?`)) {
+  deleteModal.value = {
+    open: true,
+    todo,
+  };
+};
+
+const closeDeleteModal = () => {
+  deleteModal.value = {
+    open: false,
+    todo: null,
+  };
+};
+
+const confirmDeleteTask = () => {
+  const todo = deleteModal.value.todo;
+
+  if (!todo?.id) {
+    closeDeleteModal();
     return;
   }
 
   deleteForm.post(`/todo/delete?id=${todo.id}`, {
     preserveScroll: true,
+    onFinish: () => {
+      closeDeleteModal();
+    },
   });
 };
 
 const completeTask = (todo) => {
-  if (todo.isCompleted) {
+  if (todo.isCompleted || !todo.canComplete) {
     return;
   }
 
@@ -254,7 +284,12 @@ const fieldError = (field) => {
                   class="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-white"
                 />
                 <label class="inline-flex items-center gap-2 text-sm text-gray-200">
-                  <input v-model="editForm['Todo[is_completed]']" type="checkbox" class="h-4 w-4" />
+                  <input
+                    v-model="editForm['Todo[is_completed]']"
+                    type="checkbox"
+                    class="h-4 w-4"
+                    :disabled="!isAdmin"
+                  />
                   Приключена
                 </label>
                 <div class="flex gap-2">
@@ -294,22 +329,24 @@ const fieldError = (field) => {
                 <button
                   type="button"
                   class="rounded-lg border border-emerald-500 px-3 py-2 text-sm text-emerald-300 disabled:cursor-not-allowed disabled:border-gray-700 disabled:text-gray-500"
-                  :disabled="todo.isCompleted"
+                  :disabled="todo.isCompleted || !todo.canComplete"
                   @click="completeTask(todo)"
                 >
                   Приключи
                 </button>
                 <button
                   type="button"
-                  class="rounded-lg bg-primary-600 px-3 py-2 text-sm text-white"
+                  class="rounded-lg bg-primary-600 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:bg-gray-700"
+                  :disabled="!todo.canEdit"
                   @click="startEdit(todo)"
                 >
                   Редакция
                 </button>
                 <button
                   type="button"
-                  class="rounded-lg border border-red-500 px-3 py-2 text-sm text-red-400"
-                  @click="deleteTask(todo)"
+                  class="rounded-lg border border-red-500 px-3 py-2 text-sm text-red-400 disabled:cursor-not-allowed disabled:border-gray-700 disabled:text-gray-500"
+                  :disabled="!todo.canDelete"
+                  @click="openDeleteModal(todo)"
                 >
                   Изтрий
                 </button>
@@ -345,7 +382,12 @@ const fieldError = (field) => {
                   <td class="px-3 py-3 text-gray-300">{{ formatDate(todo.createdAt) }}</td>
                   <td class="px-3 py-3">
                     <label class="inline-flex items-center gap-2 text-gray-200">
-                      <input v-model="editForm['Todo[is_completed]']" type="checkbox" class="h-4 w-4" />
+                      <input
+                        v-model="editForm['Todo[is_completed]']"
+                        type="checkbox"
+                        class="h-4 w-4"
+                        :disabled="!isAdmin"
+                      />
                       Да
                     </label>
                   </td>
@@ -373,18 +415,24 @@ const fieldError = (field) => {
                       <button
                         type="button"
                         class="rounded border border-emerald-500 px-2 py-1 text-emerald-300 disabled:cursor-not-allowed disabled:border-gray-700 disabled:text-gray-500"
-                        :disabled="todo.isCompleted"
+                        :disabled="todo.isCompleted || !todo.canComplete"
                         @click="completeTask(todo)"
                       >
                         Приключи
                       </button>
-                      <button type="button" class="rounded bg-primary-600 px-2 py-1 text-white" @click="startEdit(todo)">
+                      <button
+                        type="button"
+                        class="rounded bg-primary-600 px-2 py-1 text-white disabled:cursor-not-allowed disabled:bg-gray-700"
+                        :disabled="!todo.canEdit"
+                        @click="startEdit(todo)"
+                      >
                         Редакция
                       </button>
                       <button
                         type="button"
-                        class="rounded border border-red-500 px-2 py-1 text-red-400"
-                        @click="deleteTask(todo)"
+                        class="rounded border border-red-500 px-2 py-1 text-red-400 disabled:cursor-not-allowed disabled:border-gray-700 disabled:text-gray-500"
+                        :disabled="!todo.canDelete"
+                        @click="openDeleteModal(todo)"
                       >
                         Изтрий
                       </button>
@@ -398,4 +446,40 @@ const fieldError = (field) => {
       </section>
     </div>
   </section>
+
+  <div
+    v-if="deleteModal.open"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="delete-task-title"
+  >
+    <div class="w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 p-5 shadow-2xl">
+      <h3 id="delete-task-title" class="text-lg font-semibold text-white">Потвърждение за изтриване</h3>
+      <p class="mt-2 text-sm text-gray-300">
+        Сигурни ли сте, че искате да изтриете задачата
+        <span class="font-medium text-white">
+          {{ deleteModal.todo?.title ? `"${deleteModal.todo.title}"` : "" }}
+        </span>
+        ?
+      </p>
+      <div class="mt-5 flex justify-end gap-2">
+        <button
+          type="button"
+          class="rounded-lg border border-gray-600 px-4 py-2 text-sm text-gray-200"
+          @click="closeDeleteModal"
+        >
+          Отказ
+        </button>
+        <button
+          type="button"
+          class="rounded-lg border border-red-500 bg-red-600/20 px-4 py-2 text-sm font-medium text-red-300 disabled:cursor-not-allowed disabled:opacity-60"
+          :disabled="deleteForm.processing"
+          @click="confirmDeleteTask"
+        >
+          Изтрий
+        </button>
+      </div>
+    </div>
+  </div>
 </template>

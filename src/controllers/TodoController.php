@@ -20,7 +20,7 @@ final class TodoController extends Controller
     {
         $todo = $this->findTodo($id);
 
-        if (!$this->canManage($todo)) {
+        if (!$this->canComplete($todo)) {
             throw new ForbiddenHttpException('Нямате достъп до тази задача.');
         }
 
@@ -118,8 +118,8 @@ final class TodoController extends Controller
     {
         $todo = $this->findTodo($id);
 
-        if (!$this->canManage($todo)) {
-            throw new ForbiddenHttpException('Нямате достъп до тази задача.');
+        if (!$this->canEditOrDelete($todo)) {
+            throw new ForbiddenHttpException('Само админ може да изтрива приключени задачи.');
         }
 
         try {
@@ -141,6 +141,7 @@ final class TodoController extends Controller
     {
         $user = Yii::$app->user;
         $isAdmin = $user->can('admin');
+        $currentUserId = (int) $user->id;
 
         $query = Todo::find()->with('creator')->orderBy(['created_at' => SORT_DESC]);
 
@@ -152,19 +153,28 @@ final class TodoController extends Controller
         $models = $query->all();
 
         $todos = array_map(
-            static fn(Todo $todo): array => [
+            static function (Todo $todo) use ($isAdmin, $currentUserId): array {
+                $isOwner = (int) $todo->created_by === $currentUserId;
+                $canComplete = $isAdmin || $isOwner;
+                $canEditOrDelete = $isAdmin || ($isOwner && !(bool) $todo->is_completed);
+
+                return [
                 'id' => $todo->id,
                 'title' => $todo->title,
                 'description' => $todo->description,
                 'isCompleted' => (bool) $todo->is_completed,
                 'createdAt' => $todo->created_at,
                 'completedAt' => $todo->completed_at,
+                'canComplete' => $canComplete,
+                'canEdit' => $canEditOrDelete,
+                'canDelete' => $canEditOrDelete,
                 'createdBy' => [
                     'id' => $todo->creator?->id,
                     'username' => $todo->creator?->username,
                     'email' => $todo->creator?->email,
                 ],
-            ],
+                ];
+            },
             $models,
         );
 
@@ -181,16 +191,24 @@ final class TodoController extends Controller
     {
         $todo = $this->findTodo($id);
 
-        if (!$this->canManage($todo)) {
-            throw new ForbiddenHttpException('Нямате достъп до тази задача.');
+        if (!$this->canEditOrDelete($todo)) {
+            throw new ForbiddenHttpException('Само админ може да редактира приключени задачи.');
         }
 
         /** @var array<string, mixed> $post */
         $post = $this->request->post();
+        $isAdmin = Yii::$app->user->can('admin');
+        $originalIsCompleted = (int) $todo->is_completed;
+        $originalCompletedAt = $todo->completed_at;
 
         if ($todo->load($post)) {
-            $todo->is_completed = (int) $todo->is_completed;
-            $todo->completed_at = $todo->is_completed ? ($todo->completed_at ?? time()) : null;
+            if ($isAdmin) {
+                $todo->is_completed = (int) $todo->is_completed;
+                $todo->completed_at = $todo->is_completed ? ($todo->completed_at ?? time()) : null;
+            } else {
+                $todo->is_completed = $originalIsCompleted;
+                $todo->completed_at = $originalCompletedAt;
+            }
 
             try {
                 $saved = $todo->save();
@@ -239,11 +257,20 @@ final class TodoController extends Controller
         ];
     }
 
-    private function canManage(Todo $todo): bool
+    private function canComplete(Todo $todo): bool
     {
         $user = Yii::$app->user;
 
         return $user->can('admin') || (int) $todo->created_by === (int) $user->id;
+    }
+
+    private function canEditOrDelete(Todo $todo): bool
+    {
+        if (Yii::$app->user->can('admin')) {
+            return true;
+        }
+
+        return (int) $todo->created_by === (int) Yii::$app->user->id && !(bool) $todo->is_completed;
     }
 
     private function findTodo(int $id): Todo
