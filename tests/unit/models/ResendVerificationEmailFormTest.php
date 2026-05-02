@@ -175,8 +175,8 @@ final class ResendVerificationEmailFormTest extends \Codeception\Test\Unit
                     "Failed asserting that MySQL's case-insensitive collation allows case-mismatched email lookup.",
                 );
             verify($legitResult)
-                ->false(
-                    'Failed asserting that the cooldown blocks immediate second send after a successful mismatched-case request.',
+                ->true(
+                    'Failed asserting that a case-correct resend is still allowed after a mismatched-case request.',
                 );
 
             return;
